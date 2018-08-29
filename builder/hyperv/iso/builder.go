@@ -351,6 +351,23 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 // Run executes a Packer build and returns a packer.Artifact representing
 // a Hyperv appliance.
 func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packer.Artifact, error) {
+
+	// Get the host address from ssh or winrm config
+	host := hypervcommon.CommHost
+	hostAddress := ""
+
+	if b.config.Comm.SSHHost != "" {
+		hostAddress = b.config.Comm.SSHHost
+	} else if b.config.Comm.WinRMHost != "" {
+		hostAddress = b.config.Comm.WinRMHost
+	}
+
+	if hostAddress != "" {
+		host = func(_ multistep.StateBag) (string, error) {
+			return hostAddress, nil
+		}
+	}
+
 	// Create the driver that we'll use to communicate with Hyperv
 	driver, err := hypervcommon.NewHypervPS4Driver()
 	if err != nil {
@@ -453,7 +470,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		// configure the communicator ssh, winrm
 		&communicator.StepConnect{
 			Config:    &b.config.SSHConfig.Comm,
-			Host:      hypervcommon.CommHost,
+			Host:      host,
 			SSHConfig: b.config.SSHConfig.Comm.SSHConfigFunc(),
 		},
 
